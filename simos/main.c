@@ -1,11 +1,3 @@
-//
-//  main.c
-//  simos
-//
-//  Created by DMI on 10/17/19.
-//  Copyright © 2019 DMI. All rights reserved.
-//
-
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -13,8 +5,7 @@
 #define LENGTH_ARRAY(array) (sizeof(array) / sizeof(array[0]))
 #define BLANK_NAME "###BLANK###"
 
-int count_distinct(int arr[], int n)
-{
+int count_distinct(int arr[], int n) {
     int res = 1;
     
     for (int i = 1; i < n; i++) {
@@ -23,16 +14,46 @@ int count_distinct(int arr[], int n)
             if (arr[i] == arr[j])
                 break;
         
+        //Value -1 means that is a White card so, it will ignore them
         if (i == j && arr[i] != -1 && arr[j] != -1)
             res++;
     }
     return res;
 }
 
-float* non_normalized_weights(int* accum_positions, int* accum_positions_criteries, const int n_positions) {
-    float* weights = malloc((n_positions+1) * sizeof(float));
-    for (int i = 0; i<n_positions; i++) {
-        weights[i] = (float)accum_positions_criteries[i] / accum_positions[i];
+//e'[r]
+int* white_cards(int* positions, const int n_criteries, const int n_ranks) {
+    int* white_cards = malloc((n_ranks-1) * sizeof(int));
+    for(int i = 0; i<n_ranks; i++) white_cards[i] = 0; // initializing
+    int last_position = 0;
+
+    for(int i = 0; i<n_criteries; i++) {
+        if (positions[i] != -1)
+            last_position = positions[i];
+        
+        if (positions[i] == -1)
+            white_cards[last_position]++;
+        
+    }
+    
+    return white_cards;
+}
+
+float calcule_u(int* white_cards, const float Z, const int n_ranks) {
+    int accum_white_cards = 0; // e
+    for (int i = 0; i<n_ranks; i++) accum_white_cards+=white_cards[i]+1;
+    
+    return (Z-1)/accum_white_cards;
+}
+
+float* non_normalized_weights(int* white_cards, const float u_value, const int n_ranks) {
+    float* weights = malloc((n_ranks) * sizeof(float));
+    for (int i = 0; i<n_ranks; i++) {
+        if (i == 0) {
+            weights[i] = 1;
+            continue;
+        }
+        weights[i] = (float)weights[i - 1] + u_value * (white_cards[i-1] + 1);
     }
     return weights;
 }
@@ -53,32 +74,14 @@ int get_total(int* weights, int* accum_positions, const int n_positions) {
     return accum;
 }
 
-float simos(char** criteries, int* positions, const int n_criteries) {
-    int n_positions = count_distinct(positions, n_criteries);
-    int accum_positions[n_positions];
-    int accum_positions_criteries[n_positions];
-    int accum_positions_number = 0;
-    // Initialize array
-    for (int i=0; i<n_positions; i++) {
-        accum_positions[i] = 0;
-        accum_positions_criteries[i] = 0;
-    }
+float simos(char** criteries, int* positions, const int n_criteries, const float Z) {
+    int n_ranks = count_distinct(positions, n_criteries);
+    int* n_white_cards = white_cards(positions, n_criteries, n_ranks-1);
+    float u_value = calcule_u(n_white_cards, Z, n_ranks-1);
     
-    for (int i = 0; i<n_criteries; i++) {
-        if (strcmp(criteries[i], BLANK_NAME) == 0) continue;
-
-        accum_positions[positions[i]]++;
-        accum_positions_criteries[positions[i]]+=i+1;
-        accum_positions_number+=i+1;
-        
-    }
+    float* n_weights = non_normalized_weights(n_white_cards, u_value, n_ranks);
+    for(int i = 0; i<n_ranks; i++) printf("%.2f\n", n_weights[i]);
     
-    //Non normalized weights
-    float* weights = non_normalized_weights(accum_positions, accum_positions_criteries, n_positions);
-    //Normalize weights
-    int* _weights = normalized_weights(weights, accum_positions_number, n_positions);
-    //for(int i = 0; i<n_positions; i++) printf("value=%d\n", _weights[i]);
-    int total = get_total(_weights, accum_positions, n_positions);
     return 0.1f;
 }
 
@@ -104,7 +107,7 @@ int main(int argc, const char * argv[]) {
     
     int positions[] = { 0, 0, 0, 1, -1, 2, 2, 2, 2, 3, 4, 4, 5};
     
-    printf("%.2f\n", simos(&criterios, &positions, LENGTH_ARRAY(criterios)));
+    simos(&criterios, &positions, LENGTH_ARRAY(criterios), 6.5);
     
     return 0;
 }
