@@ -4,6 +4,7 @@
 
 #define LENGTH_ARRAY(array) (sizeof(array) / sizeof(array[0]))
 #define BLANK_NAME "###BLANK###"
+#define W 1
 
 int count_distinct(int arr[], int n) {
     int res = 1;
@@ -58,20 +59,49 @@ float* non_normalized_weights(int* white_cards, const float u_value, const int n
     return weights;
 }
 
-int* normalized_weights(float* v_weights, const int accum_positions_number, const int n_positions) {
-    int* weights = malloc((n_positions+1) * sizeof(float));
-    for (int i = 0; i<n_positions; i++) {
-        weights[i] = round((float)v_weights[i] / accum_positions_number * 100);
+float* normalized_weights_prime(float* v_weights, const int n_ranks, const float K) {
+    float* weights = malloc((n_ranks) * sizeof(float));
+    for (int i = 0; i<n_ranks; i++) {
+        //weights[i] = (float)v_weights[i] / accum_positions_number * 100;
+        weights[i] = 100 / K * v_weights[i];
     }
     return weights;
 }
 
-int get_total(int* weights, int* accum_positions, const int n_positions) {
-    int accum = 0;
-    for (int i = 0; i<n_positions; i++) {
-        accum+=accum_positions[i] * weights[i];
+float get_total(float* weights, int* accum_ranks, const int n_ranks) {
+    float accum = 0;
+    for (int i = 0; i<n_ranks; i++) {
+        accum+=accum_ranks[i] * weights[i];
     }
     return accum;
+}
+
+float truncate_to_one_decimal(float num) {
+    return floor(num * 10) / 10;
+}
+
+void print_table_simos(char** criteries, int* positions, const int n_criteries, const float Z, float* non_normalized_weights, float* normalized_weights, float* r_1, float* r_2) {
+    for (int i = 0; i<n_criteries; i++) {
+        if (strcmp(criteries[i], BLANK_NAME) == 0) continue;
+        printf("%d\t%s\t%f\t%f\t%.1f\t%f\t%f\n",positions[i]+1 ,criteries[i], non_normalized_weights[positions[i]], normalized_weights[positions[i]], truncate_to_one_decimal(normalized_weights[positions[i]]), r_1[positions[i]], r_2[positions[i]]);
+    }
+}
+
+float* ratio_1(float* normalized_weights, const int n_ranks) {
+    float* ratio = malloc((n_ranks) * sizeof(float));
+    for (int i = 0; i<n_ranks; i++) {
+        ratio[i] = (pow(10, -W) - (normalized_weights[i] - truncate_to_one_decimal(normalized_weights[i]))) / normalized_weights[i];
+        //printf("pow=%f resta=%f divisor=%f normalized_weight=%f ratio=%f\n", pow(10, -1), (normalized_weights[i] - truncate_to_one_decimal(normalized_weights[i])),(pow(10, -W) - (normalized_weights[i] - truncate_to_one_decimal(normalized_weights[i]))), normalized_weights[i], ratio[i]);
+    }
+    return ratio;
+}
+
+float* ratio_2(float* normalized_weights, const int n_ranks) {
+    float* ratio = malloc((n_ranks) * sizeof(float));
+    for (int i = 0; i<n_ranks; i++) {
+        ratio[i] = (normalized_weights[i] - truncate_to_one_decimal(normalized_weights[i])) / normalized_weights[i];
+    }
+    return ratio;
 }
 
 float simos(char** criteries, int* positions, const int n_criteries, const float Z) {
@@ -80,8 +110,22 @@ float simos(char** criteries, int* positions, const int n_criteries, const float
     float u_value = calcule_u(n_white_cards, Z, n_ranks-1);
     
     float* n_weights = non_normalized_weights(n_white_cards, u_value, n_ranks);
-    for(int i = 0; i<n_ranks; i++) printf("%.2f\n", n_weights[i]);
     
+    int accum_ranks[n_ranks];
+    //initializing with 0
+    for(int i = 0; i<n_ranks; i++) accum_ranks[i] = 0;
+    
+    for(int i = 0; i<n_criteries; i++) {
+        if (strcmp(criteries[i], BLANK_NAME) == 0) continue;
+        accum_ranks[positions[i]]++;
+    }
+    float total = get_total(n_weights, accum_ranks, n_ranks);
+    
+    float* normalize_weights = normalized_weights_prime(n_weights, n_ranks, total);
+    float* r_1 = ratio_1(normalize_weights, n_ranks);
+    float* r_2 = ratio_2(normalize_weights, n_ranks);
+
+    print_table_simos(criteries, positions, n_criteries, Z, n_weights, normalize_weights, r_1, r_2);
     return 0.1f;
 }
 
