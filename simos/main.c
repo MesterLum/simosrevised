@@ -93,7 +93,7 @@ int main(int argc, const char * argv[]) {
         "G", // 0
         "L", // 0
         "D", // 1
-        "###BLANK###", // -1,
+        BLANK_NAME, // -1,
         "B", // 2
         "F", // 2
         "I", // 2
