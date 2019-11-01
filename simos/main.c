@@ -1,11 +1,3 @@
-//
-//  main.c
-//  simos
-//
-//  Created by DMI on 10/17/19.
-//  Copyright © 2019 DMI. All rights reserved.
-//
-
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
