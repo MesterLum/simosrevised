@@ -40,30 +40,42 @@ int* white_cards(int* positions, const int n_criteries, const int n_ranks) {
     return white_cards;
 }
 
+float roundXDecimals(const float number, const int decimals) {
+    //printf("%.9f\n", number);
+    int multiple = 1; // default
+    for (int i = 0; i<decimals; i++) multiple*=10;
+    float nF = (number - (int)number) * multiple;
+    return (int)number + (round(nF) / multiple);
+}
+
 float calcule_u(int* white_cards, const float Z, const int n_ranks) {
     int accum_white_cards = 0; // e
     for (int i = 0; i<n_ranks; i++) accum_white_cards+=white_cards[i]+1;
     
-    return (Z-1)/accum_white_cards;
+    return floor(((Z-1)/accum_white_cards) * 1000000) / 1000000;
 }
 
 float* non_normalized_weights(int* white_cards, const float u_value, const int n_ranks) {
     float* weights = malloc((n_ranks) * sizeof(float));
     for (int i = 0; i<n_ranks; i++) {
         if (i == 0) {
-            weights[i] = 1;
+            weights[i] = 1.00f;
             continue;
         }
         weights[i] = (float)weights[i - 1] + u_value * (white_cards[i-1] + 1);
+        
     }
+    
+    for (int i = 0; i<n_ranks; i++) weights[i] =roundXDecimals(weights[i], 2);
     return weights;
 }
 
 float* normalized_weights_prime(float* v_weights, const int n_ranks, const float K) {
     float* weights = malloc((n_ranks) * sizeof(float));
     for (int i = 0; i<n_ranks; i++) {
-        //weights[i] = (float)v_weights[i] / accum_positions_number * 100;
+        //printf("%.9f\n", v_weights[i]);
         weights[i] = 100 / K * v_weights[i];
+        //printf("K=%.9lf v_weights=%.9lf\n", K, v_weights[i]);
     }
     return weights;
 }
@@ -71,6 +83,7 @@ float* normalized_weights_prime(float* v_weights, const int n_ranks, const float
 float get_total(float* weights, int* accum_ranks, const int n_ranks) {
     float accum = 0;
     for (int i = 0; i<n_ranks; i++) {
+        //printf("w=%.9f * a=%d total=%f\n", weights[i], accum_ranks[i],accum_ranks[i] * weights[i]);
         accum+=accum_ranks[i] * weights[i];
     }
     return accum;
@@ -83,7 +96,7 @@ float truncate_to_one_decimal(float num) {
 void print_table_simos(char** criteries, int* positions, const int n_criteries, const float Z, float* non_normalized_weights, float* normalized_weights, float* r_1, float* r_2) {
     for (int i = 0; i<n_criteries; i++) {
         if (strcmp(criteries[i], BLANK_NAME) == 0) continue;
-        printf("%d\t%s\t%f\t%f\t%.1f\t%f\t%f\n",positions[i]+1 ,criteries[i], non_normalized_weights[positions[i]], normalized_weights[positions[i]], truncate_to_one_decimal(normalized_weights[positions[i]]), r_1[positions[i]], r_2[positions[i]]);
+        printf("%d\t%s\t%.9f\t%.9f\t%.1f\t%.9f\t%.9f\n",positions[i]+1 ,criteries[i], non_normalized_weights[positions[i]], normalized_weights[positions[i]], truncate_to_one_decimal(normalized_weights[positions[i]]), r_1[positions[i]], r_2[positions[i]]);
     }
 }
 
@@ -149,7 +162,7 @@ int main(int argc, const char * argv[]) {
         
     };
     
-    int positions[] = { 0, 0, 0, 1, -1, 2, 2, 2, 2, 3, 4, 4, 5};
+    int positions[] = { 0, 0, 0, 1, -1, 2, 2, 2, 2,  3, 4, 4, 5};
     
     simos(&criterios, &positions, LENGTH_ARRAY(criterios), 6.5);
     
