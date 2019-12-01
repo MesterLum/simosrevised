@@ -3,7 +3,7 @@
 #include <math.h>
 
 #define LENGTH_ARRAY(array) (sizeof(array) / sizeof(array[0]))
-#define BLANK_NAME "###BLANK###"
+#define BLANK_NAME -1
 #define W 1
 
 int count_distinct(int arr[], int n) {
@@ -93,10 +93,10 @@ float truncate_to_one_decimal(float num) {
     return floor(num * 10) / 10;
 }
 
-void print_table_simos(char** criteries, int* positions, const int n_criteries, const float Z, float* non_normalized_weights, float* normalized_weights, float* r_1, float* r_2) {
+void print_table_simos(int* criteries, int* positions, const int n_criteries, const float Z, float* non_normalized_weights, float* normalized_weights, float* r_1, float* r_2) {
     for (int i = 0; i<n_criteries; i++) {
-        if (strcmp(criteries[i], BLANK_NAME) == 0) continue;
-        printf("%d\t%s\t%.9f\t%.9f\t%.1f\t%.9f\t%.9f\n",positions[i]+1 ,criteries[i], non_normalized_weights[positions[i]], normalized_weights[positions[i]], truncate_to_one_decimal(normalized_weights[positions[i]]), r_1[positions[i]], r_2[positions[i]]);
+        if (criteries[i] == BLANK_NAME) continue;
+        printf("%d\t%d\t%.9f\t%.9f\t%.1f\t%.9f\t%.9f\n",positions[i]+1 ,criteries[i], non_normalized_weights[positions[i]], normalized_weights[positions[i]], truncate_to_one_decimal(normalized_weights[positions[i]]), r_1[positions[i]], r_2[positions[i]]);
     }
 }
 
@@ -117,7 +117,24 @@ float* ratio_2(float* normalized_weights, const int n_ranks) {
     return ratio;
 }
 
-float simos(char** criteries, int* positions, const int n_criteries, const float Z) {
+void swap(float *xp, float *yp) {
+    float temp = *xp;
+    *xp = *yp;
+    *yp = temp;
+}
+
+void bubbleSort(float* arr, int n) {
+    int i, j;
+    for (i = 0; i < n-1; i++)
+        
+        // Last i elements are already in place
+        for (j = 0; j < n-i-1; j++)
+            if (arr[j] > arr[j+1])
+                swap(&arr[j], &arr[j+1]);
+}
+
+
+float* get_weights(int* criteries, int* positions, const int n_criteries, const float Z) {
     int n_ranks = count_distinct(positions, n_criteries);
     int* n_white_cards = white_cards(positions, n_criteries, n_ranks-1);
     float u_value = calcule_u(n_white_cards, Z, n_ranks-1);
@@ -129,7 +146,7 @@ float simos(char** criteries, int* positions, const int n_criteries, const float
     for(int i = 0; i<n_ranks; i++) accum_ranks[i] = 0;
     
     for(int i = 0; i<n_criteries; i++) {
-        if (strcmp(criteries[i], BLANK_NAME) == 0) continue;
+        if (criteries[i] == BLANK_NAME) continue;
         accum_ranks[positions[i]]++;
     }
     float total = get_total(n_weights, accum_ranks, n_ranks);
@@ -138,33 +155,68 @@ float simos(char** criteries, int* positions, const int n_criteries, const float
     float* r_1 = ratio_1(normalize_weights, n_ranks);
     float* r_2 = ratio_2(normalize_weights, n_ranks);
 
-    print_table_simos(criteries, positions, n_criteries, Z, n_weights, normalize_weights, r_1, r_2);
-    return 0.1f;
+    //print_table_simos(criteries, positions, n_criteries, Z, n_weights, normalize_weights, r_1, r_2);
+    //for (int i = 0; i<n_ranks; i++) printf("%f\n", r_1[i]);
+    //printf("\n");
+    //bubbleSort(r_1, n_ranks);
+    //for (int i = 0; i<n_ranks; i++) printf("%f\n", r_1[i]);
+    
+    // tmp return
+    
+    return normalize_weights;
+}
+
+float* simos(int data[][2], const int n_criteries, const float Z) {
+    int criteries[n_criteries];
+    int positions[n_criteries];
+    for (int i = 0; i < n_criteries; i++) {
+        criteries[i] = data[i][0];
+        positions[i] = data[i][1];
+    }
+    
+    return get_weights(criteries, positions, n_criteries, Z);
 }
 
 int main(int argc, const char * argv[]) {
     // insert code here...
     
-    char* criterios[] = {
-        "C", // 0
-        "G", // 0
-        "L", // 0
-        "D", // 1
+    /*int criterios[] = {
+        1, // 0
+        2, // 0
+        3, // 0
+        4, // 1
         BLANK_NAME, // -1,
-        "B", // 2
-        "F", // 2
-        "I", // 2
-        "J",  // 2,
-        "E", // 3
-        "A", // 4
-        "H", // 4
-        "K" // 5
+        5, // 2
+        6, // 2
+        7, // 2
+        8,  // 2,
+        9, // 3
+        10, // 4
+        11, // 4
+        12 // 5
         
     };
     
-    int positions[] = { 0, 0, 0, 1, -1, 2, 2, 2, 2,  3, 4, 4, 5};
+    int positions[] = { 0, 0, 0, 1, -1, 2, 2, 2, 2,  3, 4, 4, 5};*/
+    int data[][2] = {
+        {1, 0},
+        {2, 0},
+        {3, 0},
+        {4, 1},
+        {BLANK_NAME, BLANK_NAME},
+        {5, 2},
+        {6, 2},
+        {7, 2},
+        {8, 2},
+        {9, 3},
+        {10, 4},
+        {11, 4},
+        {12, 5}
+    };
     
-    simos(&criterios, &positions, LENGTH_ARRAY(criterios), 6.5);
+    float* d = simos(data, 13, 6.5);
+    
+    for (int i = 0; i < 6; i++) printf("%f\n", d[i]);
     
     return 0;
 }
