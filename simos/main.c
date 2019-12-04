@@ -137,6 +137,7 @@ void bubbleSort(float* arr, int n) {
 float* get_weights(int* criteries, int* positions, const int n_criteries, const float Z) {
     int n_ranks = count_distinct(positions, n_criteries);
     int* n_white_cards = white_cards(positions, n_criteries, n_ranks-1);
+    
     float u_value = calcule_u(n_white_cards, Z, n_ranks-1);
     
     float* n_weights = non_normalized_weights(n_white_cards, u_value, n_ranks);
@@ -155,15 +156,25 @@ float* get_weights(int* criteries, int* positions, const int n_criteries, const 
     float* r_1 = ratio_1(normalize_weights, n_ranks);
     float* r_2 = ratio_2(normalize_weights, n_ranks);
 
-    //print_table_simos(criteries, positions, n_criteries, Z, n_weights, normalize_weights, r_1, r_2);
+    print_table_simos(criteries, positions, n_criteries, Z, n_weights, normalize_weights, r_1, r_2);
     //for (int i = 0; i<n_ranks; i++) printf("%f\n", r_1[i]);
     //printf("\n");
     //bubbleSort(r_1, n_ranks);
     //for (int i = 0; i<n_ranks; i++) printf("%f\n", r_1[i]);
     
     // tmp return
+    float* returned_weights = malloc((n_criteries) * sizeof(float));
+    int i_fake = 0;
+    for (int i = 0; i<n_criteries; i++) {
+        if (positions[i] == BLANK_NAME)
+            continue;
+        
+        //printf("f=%f i=%d\n",  normalize_weights[positions[i]], i);
+        returned_weights[i_fake] = normalize_weights[positions[i]];
+        i_fake++;
+    }
     
-    return normalize_weights;
+    return returned_weights;
 }
 
 float* simos(int data[][2], const int n_criteries, const float Z) {
@@ -216,7 +227,7 @@ int main(int argc, const char * argv[]) {
     
     float* d = simos(data, 13, 6.5);
     
-    for (int i = 0; i < 6; i++) printf("%f\n", d[i]);
+    for (int i = 0; i < 12; i++) printf("i=%d %f\n",i+1, d[i]);
     
     return 0;
 }
