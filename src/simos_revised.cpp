@@ -10,7 +10,7 @@ SimosRevised::SimosRevised(const RanksMapType &ranks,
     : ranks(ranks), whiteCards(whiteCards), zRatio(zRatio), decimals(decimals) {
 }
 
-void SimosRevised::generateWeights() {
+WeightsMapType SimosRevised::generateWeights() {
 
   const auto whiteCardsNonZero = getWhiteCardsWithNonZeroValues();
   const auto whiteCardsNonZeroCount = getWhiteCardsCount(whiteCardsNonZero);
@@ -21,7 +21,7 @@ void SimosRevised::generateWeights() {
 
   const auto sumNonNormalizedWeights = getWeightsSum(nonNormalizedWeights);
 
-  const auto normalizedWeights =
+  auto normalizedWeights =
       getNormalizedWeights(nonNormalizedWeights, sumNonNormalizedWeights);
 
   const auto normalizedWeightsTruncated =
@@ -88,6 +88,14 @@ void SimosRevised::generateWeights() {
     SimosUtils::printRankGroups(f1);
     SimosUtils::printRankGroups(f2);
   }
+  roundUp(normalizedWeights, f2);
+  roundDown(normalizedWeights, f1);
+  if (debug) {
+    std::cout << "==== Normalized" << std::endl;
+    SimosUtils::printWeights(normalizedWeights, 9);
+  }
+
+  return normalizedWeights;
 }
 
 WeightsMapType
@@ -110,7 +118,6 @@ SimosRevised::getNonNormalizedWeights(const WhiteCardsMapType &whiteCards,
       if (idx == internalIdx)
         break;
     }
-    std::cout << "White Cards: " << whiteCardsCount << std::endl;
     weights[r.first] =
         SimosUtils::roundToXDecimals(1 + whiteCardsCount * ratio, 2);
     idx++;
@@ -298,4 +305,16 @@ RanksMapType SimosRevised::getF2Ranks(const ListWeightType &weightsList,
   }
 
   return ranksF2;
+}
+
+void SimosRevised::roundUp(WeightsMapType &weights, const RanksMapType &f2) {
+  for (const auto &r : f2) {
+    weights[r.first] = SimosUtils::roundToXDecimals(weights.at(r.first), 1);
+  }
+}
+
+void SimosRevised::roundDown(WeightsMapType &weights, const RanksMapType &f1) {
+  for (const auto &r : f1) {
+    weights[r.first] = SimosUtils::truncateToXDecimals(weights.at(r.first), 1);
+  }
 }

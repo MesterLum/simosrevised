@@ -13,7 +13,7 @@ typedef std::vector<std::pair<unsigned int, DataPrecisionType>> ListWeightType;
 
 class SimosRevised {
 private:
-  bool debug = true;
+  bool debug = false;
 
 protected:
   RanksMapType ranks = {};
@@ -48,11 +48,13 @@ protected:
   RanksMapType getF2Ranks(const ListWeightType &weightsList,
                           const RanksMapType &mList,
                           unsigned int totalElements);
+  void roundUp(WeightsMapType &weights, const RanksMapType &f2);
+  void roundDown(WeightsMapType &weights, const RanksMapType &f1);
 
 public:
   SimosRevised(const RanksMapType &ranks, const WhiteCardsMapType &whiteCards,
                DataPrecisionType zRatio, unsigned int decimals);
 
-  void generateWeights();
+  WeightsMapType generateWeights();
 };
 #endif

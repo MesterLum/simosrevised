@@ -12,6 +12,7 @@ int main() {
 
   SimosRevised simosRevised(ranks, whiteCards, 6.5, 1);
 
-  simosRevised.generateWeights();
+  const auto weights = simosRevised.generateWeights();
+
   return 0;
 }
