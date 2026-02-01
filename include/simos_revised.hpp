@@ -18,8 +18,8 @@ protected:
   RanksMapType ranks = {};
   WhiteCardsMapType whiteCards = {};
   DataPrecisionType zRatio;
-  unsigned int decimals;
-  unsigned int decimalsToRetain = 6;
+  int decimals;
+  int decimalsToRetain = 6;
   WeightsMapType getNonNormalizedWeights(const WhiteCardsMapType &whiteCards,
                                          DataPrecisionType ratio);
   WeightsMapType
@@ -31,6 +31,12 @@ protected:
   DataPrecisionType getRatio(unsigned int whiteCardsCount);
   DataPrecisionType getWeightsSum(const WeightsMapType &weights);
   WeightsMapType getNormalizedWeightsTruncated(const WeightsMapType &weights);
+  WeightsMapType
+  getNearestUpWeights(const WeightsMapType &normalizedWeights,
+                      const WeightsMapType &normalizedWeightsTruncated);
+  WeightsMapType
+  getNearestDownWeights(const WeightsMapType &normalizedWeights,
+                        const WeightsMapType &normalizedWeightsTruncated);
 
 public:
   SimosRevised(const RanksMapType &ranks, const WhiteCardsMapType &whiteCards,

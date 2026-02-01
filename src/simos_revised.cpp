@@ -1,5 +1,6 @@
 #include "../include/simos_revised.hpp"
 #include "../include/utils.hpp"
+#include <cmath>
 #include <iostream>
 
 SimosRevised::SimosRevised(const RanksMapType &ranks,
@@ -29,6 +30,16 @@ void SimosRevised::generateWeights() {
   DataPrecisionType sumNormalizedWeightsTruncated =
       getWeightsSum(normalizedWeightsTruncated);
 
+  DataPrecisionType difference = 100.0 - sumNormalizedWeightsTruncated;
+
+  DataPrecisionType vValue = pow(10, decimals) * difference;
+
+  WeightsMapType d1 =
+      getNearestUpWeights(normalizedWeights, normalizedWeightsTruncated);
+
+  WeightsMapType d2 =
+      getNearestDownWeights(normalizedWeights, normalizedWeightsTruncated);
+
   if (debug) {
     std::cout << "Ratio:" << ratio << std::endl;
     std::cout << "Total white cards: " << whiteCardsNonZeroCount << std::endl;
@@ -41,6 +52,12 @@ void SimosRevised::generateWeights() {
     SimosUtils::printWeights(normalizedWeightsTruncated, 1);
     std::cout << "Sum normalized weights: " << sumNormalizedWeightsTruncated
               << std::endl;
+    std::cout << "Difference: " << difference << std::endl;
+    std::cout << "V Value: " << vValue << std::endl;
+    std::cout << "==== Ratio  UP" << std::endl;
+    SimosUtils::printWeights(d1, 9);
+    std::cout << "==== Ratio  DOWN" << std::endl;
+    SimosUtils::printWeights(d2, 9);
   }
 }
 
@@ -131,4 +148,36 @@ SimosRevised::getNormalizedWeightsTruncated(const WeightsMapType &weights) {
         SimosUtils::truncateToXDecimals(w.second, decimals);
   }
   return truncatedWeights;
+}
+
+WeightsMapType SimosRevised::getNearestUpWeights(
+    const WeightsMapType &normalizedWeights,
+    const WeightsMapType &normalizedWeightsTruncated) {
+  WeightsMapType nearestWeights;
+  for (const auto &r : ranks) {
+
+    DataPrecisionType normalizedWeight = normalizedWeights.at(r.first);
+    DataPrecisionType normalizedWeightTruncated =
+        normalizedWeightsTruncated.at(r.first);
+    nearestWeights[r.first] =
+        (pow(10, -decimals) - (normalizedWeight - normalizedWeightTruncated)) /
+        normalizedWeight;
+  }
+
+  return nearestWeights;
+}
+
+WeightsMapType SimosRevised::getNearestDownWeights(
+    const WeightsMapType &normalizedWeights,
+    const WeightsMapType &normalizedWeightsTruncated) {
+  WeightsMapType nearestWeights;
+  for (const auto &r : ranks) {
+    DataPrecisionType normalizedWeight = normalizedWeights.at(r.first);
+    DataPrecisionType normalizedWeightTruncated =
+        normalizedWeightsTruncated.at(r.first);
+    nearestWeights[r.first] =
+        (normalizedWeight - normalizedWeightTruncated) / normalizedWeight;
+  }
+
+  return nearestWeights;
 }
