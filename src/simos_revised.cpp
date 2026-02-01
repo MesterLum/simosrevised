@@ -1,5 +1,6 @@
 #include "../include/simos_revised.hpp"
 #include "../include/utils.hpp"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -11,34 +12,51 @@ SimosRevised::SimosRevised(const RanksMapType &ranks,
 
 void SimosRevised::generateWeights() {
 
-  WhiteCardsMapType whiteCardsNonZero = getWhiteCardsWithNonZeroValues();
-  unsigned int whiteCardsNonZeroCount = getWhiteCardsCount(whiteCardsNonZero);
-  DataPrecisionType ratio = getRatio(whiteCardsNonZeroCount);
+  const auto whiteCardsNonZero = getWhiteCardsWithNonZeroValues();
+  const auto whiteCardsNonZeroCount = getWhiteCardsCount(whiteCardsNonZero);
+  const auto ratio = getRatio(whiteCardsNonZeroCount);
 
-  WeightsMapType nonNormalizedWeights =
+  const auto nonNormalizedWeights =
       getNonNormalizedWeights(whiteCardsNonZero, ratio);
 
-  DataPrecisionType sumNonNormalizedWeights =
-      getWeightsSum(nonNormalizedWeights);
+  const auto sumNonNormalizedWeights = getWeightsSum(nonNormalizedWeights);
 
-  WeightsMapType normalizedWeights =
+  const auto normalizedWeights =
       getNormalizedWeights(nonNormalizedWeights, sumNonNormalizedWeights);
 
-  WeightsMapType normalizedWeightsTruncated =
+  const auto normalizedWeightsTruncated =
       getNormalizedWeightsTruncated(normalizedWeights);
 
-  DataPrecisionType sumNormalizedWeightsTruncated =
+  const auto sumNormalizedWeightsTruncated =
       getWeightsSum(normalizedWeightsTruncated);
 
-  DataPrecisionType difference = 100.0 - sumNormalizedWeightsTruncated;
+  const auto difference = 100.0 - sumNormalizedWeightsTruncated;
 
-  DataPrecisionType vValue = pow(10, decimals) * difference;
+  int vValue = pow(10, decimals) * difference;
 
-  WeightsMapType d1 =
+  const auto d1 =
       getNearestUpWeights(normalizedWeights, normalizedWeightsTruncated);
 
-  WeightsMapType d2 =
+  const auto d2 =
       getNearestDownWeights(normalizedWeights, normalizedWeightsTruncated);
+
+  const auto mGreaterValues = getGreaterElements(d1, d2);
+
+  const auto mElementsCount = getSumGreaterElements(mGreaterValues);
+  const auto sortedD1 = sortWeights(d1);
+  const auto sortedD2 = sortWeights(d2, false);
+
+  const auto n = getCriteriaCount();
+
+  RanksMapType f1, f2;
+  if ((mElementsCount + vValue) <= n) {
+    f1 = getF1Ranks(sortedD2, mGreaterValues,
+                    mElementsCount + (n - vValue - mElementsCount),
+                    mElementsCount);
+    f2 = getF2Ranks(sortedD2, mGreaterValues, vValue);
+
+  } else {
+  }
 
   if (debug) {
     std::cout << "Ratio:" << ratio << std::endl;
@@ -58,6 +76,17 @@ void SimosRevised::generateWeights() {
     SimosUtils::printWeights(d1, 9);
     std::cout << "==== Ratio  DOWN" << std::endl;
     SimosUtils::printWeights(d2, 9);
+    std::cout << "==== M" << std::endl;
+    for (const auto &m : mGreaterValues)
+      std::cout << m.first << ": " << m.second.size() << std::endl;
+    std::cout << "M Total: " << mElementsCount << std::endl;
+    std::cout << "==== Sorted" << std::endl;
+    SimosUtils::printUnorderedRanksData(sortedD1);
+    std::cout << "==== Sorted" << std::endl;
+    SimosUtils::printUnorderedRanksData(sortedD2);
+    std::cout << "==== Sorted" << std::endl;
+    SimosUtils::printRankGroups(f1);
+    SimosUtils::printRankGroups(f2);
   }
 }
 
@@ -81,6 +110,7 @@ SimosRevised::getNonNormalizedWeights(const WhiteCardsMapType &whiteCards,
       if (idx == internalIdx)
         break;
     }
+    std::cout << "White Cards: " << whiteCardsCount << std::endl;
     weights[r.first] =
         SimosUtils::roundToXDecimals(1 + whiteCardsCount * ratio, 2);
     idx++;
@@ -180,4 +210,92 @@ WeightsMapType SimosRevised::getNearestDownWeights(
   }
 
   return nearestWeights;
+}
+
+RanksMapType SimosRevised::getGreaterElements(const WeightsMapType &d1,
+                                              const WeightsMapType &d2) {
+  RanksMapType mRanks;
+  for (const auto &r : ranks) {
+    if (d1.at(r.first) > d2.at(r.first))
+      mRanks[r.first] = r.second;
+  }
+
+  return mRanks;
+}
+
+unsigned int SimosRevised::getSumGreaterElements(const RanksMapType &mRanks) {
+  unsigned int total = 0;
+  for (const auto &r : mRanks) {
+    total += r.second.size();
+  }
+
+  return total;
+}
+
+ListWeightType SimosRevised::sortWeights(const WeightsMapType &weights,
+                                         bool asc) {
+  ListWeightType orderedWeights;
+  for (const auto &w : weights) {
+    std::pair<unsigned int, DataPrecisionType> val;
+    val.first = w.first;
+    val.second = w.second;
+    orderedWeights.push_back(val);
+  }
+
+  std::sort(orderedWeights.begin(), orderedWeights.end(),
+            [asc](const auto &a, const auto &b) {
+              if (asc)
+                return a.second < b.second;
+              return a.second > b.second;
+            });
+
+  return orderedWeights;
+}
+
+RanksMapType SimosRevised::getF1Ranks(const ListWeightType &weightsList,
+                                      const RanksMapType &mList,
+                                      unsigned int totalElements,
+                                      unsigned int mCount) {
+  RanksMapType ranksF1;
+
+  // Map M values
+  ranksF1.insert(mList.begin(), mList.end());
+
+  unsigned int counter = mCount;
+  for (int i = weightsList.size() - 1; i >= 0; i--) {
+    if (counter >= totalElements)
+      break;
+
+    const auto criteriaGroupKey = weightsList[i].first;
+
+    if (mList.find(criteriaGroupKey) != mList.end())
+      continue;
+
+    ranksF1[criteriaGroupKey] = ranks[criteriaGroupKey];
+
+    counter += ranks[criteriaGroupKey].size();
+  }
+
+  return ranksF1;
+}
+
+RanksMapType SimosRevised::getF2Ranks(const ListWeightType &weightsList,
+                                      const RanksMapType &mList,
+                                      unsigned int totalElements) {
+  RanksMapType ranksF2;
+
+  unsigned int counter = 0;
+
+  for (const auto &w : weightsList) {
+    if (counter >= totalElements)
+      break;
+    if (mList.find(w.first) != mList.end())
+      continue;
+
+    ranksF2[w.first] = ranks[w.first];
+
+    counter += ranks[w.first].size();
+  }
+
+  return ranksF2;
 }

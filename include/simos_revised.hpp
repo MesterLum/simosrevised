@@ -9,6 +9,7 @@ typedef std::vector<RankType> RankGroupType;
 typedef std::map<unsigned int, RankGroupType> RanksMapType;
 typedef std::map<unsigned int, unsigned int> WhiteCardsMapType;
 typedef std::map<unsigned int, DataPrecisionType> WeightsMapType;
+typedef std::vector<std::pair<unsigned int, DataPrecisionType>> ListWeightType;
 
 class SimosRevised {
 private:
@@ -37,6 +38,16 @@ protected:
   WeightsMapType
   getNearestDownWeights(const WeightsMapType &normalizedWeights,
                         const WeightsMapType &normalizedWeightsTruncated);
+  RanksMapType getGreaterElements(const WeightsMapType &d1,
+                                  const WeightsMapType &d2);
+  unsigned int getSumGreaterElements(const RanksMapType &mRanks);
+  ListWeightType sortWeights(const WeightsMapType &weights, bool asc = true);
+  RanksMapType getF1Ranks(const ListWeightType &weightsList,
+                          const RanksMapType &mList, unsigned int totalElements,
+                          unsigned int mCount);
+  RanksMapType getF2Ranks(const ListWeightType &weightsList,
+                          const RanksMapType &mList,
+                          unsigned int totalElements);
 
 public:
   SimosRevised(const RanksMapType &ranks, const WhiteCardsMapType &whiteCards,

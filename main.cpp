@@ -2,8 +2,8 @@
 int main() {
   RanksMapType ranks = {
       {1, RankGroupType{"c", "g", "l"}},      {2, RankGroupType{"d"}},
-      {4, RankGroupType{"b", "f", "i", "j"}}, {5, RankGroupType{"e"}},
-      {6, RankGroupType{"a", "h"}},           {7, RankGroupType{"k"}},
+      {3, RankGroupType{"b", "f", "i", "j"}}, {4, RankGroupType{"e"}},
+      {5, RankGroupType{"a", "h"}},           {6, RankGroupType{"k"}},
   };
 
   WhiteCardsMapType whiteCards = {

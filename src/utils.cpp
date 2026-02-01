@@ -21,3 +21,17 @@ void SimosUtils::printWeights(WeightsMapType weights, int decimals) {
               << std::setprecision(decimals) << w.second << std::endl;
   }
 }
+void SimosUtils::printUnorderedRanksData(ListWeightType ratio) {
+  for (const auto &val : ratio) {
+    std::cout << "[" << val.first << "]" << " = " << val.second << std::endl;
+  }
+}
+void SimosUtils::printRankGroups(const RanksMapType &ranks) {
+  for (const auto &r : ranks) {
+    std::cout << "[" << r.first << "] = [";
+    for (const auto &value : r.second)
+      std::cout << " " << value;
+    std::cout << " ]" << std::endl;
+  }
+  std::cout << std::endl;
+}
