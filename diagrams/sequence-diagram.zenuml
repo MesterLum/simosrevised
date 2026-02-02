@@ -1,0 +1,139 @@
+zenuml
+    title SIMOS Revised - Generate Weights Sequence
+    
+    @Actor User
+    @Starter User
+    User->SimosRevised.generateWeights() {
+        
+        // Step 1: Process white cards and calculate ratio
+        whiteCardsNonZero = getWhiteCardsWithNonZeroValues() {
+            return "Convert white cards to intervals (e_r = e'_r + 1)"
+        }
+        
+        whiteCardsCount = getWhiteCardsCount(whiteCardsNonZero) {
+            return "Sum all white card intervals"
+        }
+        
+        ratio = getRatio(whiteCardsCount) {
+            return "Calculate u = (z-1)/e"
+        }
+        
+        // Step 2: Calculate non-normalized weights
+        nonNormalizedWeights = getNonNormalizedWeights(whiteCardsNonZero, ratio) {
+            return "Calculate k(r) = 1 + u(e_0 + ... + e_{r-1})"
+        }
+        
+        sumNonNormalized = getWeightsSum(nonNormalizedWeights) {
+            return "Sum of all non-normalized weights"
+        }
+        
+        // Step 3: Normalize weights to sum to 100
+        normalizedWeights = getNormalizedWeights(nonNormalizedWeights, sumNonNormalized) {
+            return "Calculate k_i = 100 * k'_i / K'"
+        }
+        
+        // Step 4: Truncate to desired decimal places
+        normalizedTruncated = getNormalizedWeightsTruncated(normalizedWeights) {
+            SimosUtils.truncateToXDecimals(value, decimals) {
+                return "Truncate to w decimal places"
+            }
+            return "All weights truncated"
+        }
+        
+        sumTruncated = getWeightsSum(normalizedTruncated)
+        
+        // Calculate difference and v value
+        difference = "100.0 - sumTruncated"
+        vValue = "round(10^decimals * difference)"
+        
+        // Step 5: Calculate dysfunction ratios
+        d1 = getNearestUpWeights(normalizedWeights, normalizedTruncated) {
+            return "δ'_i = [10^-w - (k_i - k''_i)] / k_i"
+        }
+        
+        d2 = getNearestDownWeights(normalizedWeights, normalizedTruncated) {
+            return "δ_i = (k_i - k''_i) / k_i"
+        }
+        
+        // Step 6: Identify set M where round-down is better
+        mGreaterValues = getGreaterElements(d1, d2) {
+            return "M = {i | δ'_i > δ_i}"
+        }
+        
+        mCount = getSumGreaterElements(mGreaterValues)
+        
+        sortedD1 = sortWeights(d1, true)
+        sortedD2 = sortWeights(d2, false)
+        
+        n = getCriteriaCount()
+        
+        // Step 7: Partition criteria into F+ and F-
+        if ((mCount + vValue) <= n) {
+            // Case (a): m + m̄ ≤ n
+            f1 = getF1Ranks(sortedD2, mGreaterValues, params) {
+                return "Build F- (round down set)"
+            }
+            forcedDownElements = "n - mCount - vValue"
+            f2 = getF2Ranks(sortedD2, mGreaterValues, total) {
+                return "Build F+ (round up set)"
+            }
+        } else {
+            // Case (b): m + m̄ > n
+            f1 = getF1Ranks(sortedD1, mGreaterValues, params) {
+                return "Build F- (round down set)"
+            }
+            f2 = getF2Ranks(sortedD1, mGreaterValues, total) {
+                return "Build F+ (round up set)"
+            }
+            forcedTotalElements = "vValue + mCount - n"
+        }
+        
+        // Optional debug output
+        if(debug) {
+            SimosUtils.printWeights(nonNormalizedWeights, 10)
+            SimosUtils.printWeights(normalizedWeights, 10)
+            SimosUtils.printWeights(normalizedTruncated, 9)
+            SimosUtils.printRankGroups(f1)
+            SimosUtils.printRankGroups(f2)
+        }
+        
+        // Step 8: Apply rounding
+        copiedWeights = "Copy of normalizedWeights"
+        
+        roundUp(normalizedWeights, f2) {
+            SimosUtils.roundUpToXDecimals(weight, decimals) {
+                return "Round up to w decimals"
+            }
+        }
+        
+        roundDown(normalizedWeights, f1) {
+            SimosUtils.truncateToXDecimals(weight, decimals) {
+                return "Truncate to w decimals"
+            }
+        }
+        
+        // Step 9: Convert to final format
+        finalWeights = convertToRanksWeight(normalizedWeights) {
+            return "Convert map to vector<RankWeight>"
+        }
+        
+        // Step 10: Handle ex aequo criteria if needed
+        if(forcedTotalElements > 0) {
+            sortedCopied = sortWeights(copiedWeights, false)
+            forceRoundUp(finalWeights, sortedCopied, mGreaterValues, forcedTotalElements) {
+                SimosUtils.roundUpToXDecimals(weight, decimals)
+                return "Force round up for ex aequo criteria"
+            }
+        }
+        
+        if(forcedDownElements > 0) {
+            forceRoundDown(finalWeights, copiedWeights, f2, forcedDownElements) {
+                SimosUtils.truncateToXDecimals(weight, decimals)
+                return "Force round down for ex aequo criteria"
+            }
+        }
+        
+        return finalWeights
+    }
+    
+    User<--SimosRevised: "vector<RankWeight> with calculated weights"
