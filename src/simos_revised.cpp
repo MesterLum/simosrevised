@@ -7,9 +7,10 @@
 
 SimosRevised::SimosRevised(const RanksMapType &ranks,
                            const WhiteCardsMapType &whiteCards,
-                           DataPrecisionType zRatio, unsigned int decimals)
-    : ranks(ranks), whiteCards(whiteCards), zRatio(zRatio), decimals(decimals) {
-}
+                           DataPrecisionType zRatio, unsigned int decimals,
+                           bool debug)
+    : ranks(ranks), whiteCards(whiteCards), zRatio(zRatio), decimals(decimals),
+      debug(debug) {}
 
 std::vector<RankWeight> SimosRevised::generateWeights() {
 
@@ -33,8 +34,7 @@ std::vector<RankWeight> SimosRevised::generateWeights() {
 
   const auto difference = 100.0 - sumNormalizedWeightsTruncated;
 
-  int vValue = pow(10, decimals) * difference;
-
+  int vValue = (int)round(pow(10, decimals) * difference);
   const auto d1 =
       getNearestUpWeights(normalizedWeights, normalizedWeightsTruncated);
 
@@ -56,14 +56,16 @@ std::vector<RankWeight> SimosRevised::generateWeights() {
     f1 = getF1Ranks(sortedD2, mGreaterValues,
                     mElementsCount + (n - vValue - mElementsCount),
                     mElementsCount);
-    f2 = getF2Ranks(sortedD2, mGreaterValues, vValue);
     forcedDownElements = n - mElementsCount - vValue;
-
+    f2 = getF2Ranks(sortedD2, mGreaterValues, vValue + forcedDownElements);
+    //   std::cout << "Forced down elements: " << vValue << " B "
+    //             << forcedDownElements << std::endl;
   } else {
     f1 = getF1Ranks(sortedD1, mGreaterValues, n - vValue, mElementsCount);
     f2 = getF2Ranks(sortedD1, mGreaterValues,
                     n - mElementsCount + (vValue + mElementsCount - n));
     forcedTotalElements = vValue + mElementsCount - n;
+    std::cout << "Her2" << std::endl;
   }
 
   if (debug) {
@@ -75,7 +77,7 @@ std::vector<RankWeight> SimosRevised::generateWeights() {
     std::cout << "==== Normalized" << std::endl;
     SimosUtils::printWeights(normalizedWeights, 10);
     std::cout << "==== Normalized Truncated" << std::endl;
-    SimosUtils::printWeights(normalizedWeightsTruncated, 1);
+    SimosUtils::printWeights(normalizedWeightsTruncated, 9);
     std::cout << "Sum normalized weights: " << sumNormalizedWeightsTruncated
               << std::endl;
     std::cout << "Difference: " << difference << std::endl;
@@ -92,8 +94,9 @@ std::vector<RankWeight> SimosRevised::generateWeights() {
     SimosUtils::printUnorderedRanksData(sortedD1);
     std::cout << "==== Sorted" << std::endl;
     SimosUtils::printUnorderedRanksData(sortedD2);
-    std::cout << "==== Sorted" << std::endl;
+    std::cout << "==== F1" << std::endl;
     SimosUtils::printRankGroups(f1);
+    std::cout << "==== F2" << std::endl;
     SimosUtils::printRankGroups(f2);
   }
   // Copying weights just in case needed

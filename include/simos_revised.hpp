@@ -18,14 +18,13 @@ struct RankWeight {
 };
 
 class SimosRevised {
-private:
-  bool debug = false;
 
 protected:
   RanksMapType ranks = {};
   WhiteCardsMapType whiteCards = {};
   DataPrecisionType zRatio;
   int decimals;
+  bool debug = false;
   WeightsMapType getNonNormalizedWeights(const WhiteCardsMapType &whiteCards,
                                          DataPrecisionType ratio);
   WeightsMapType
@@ -65,7 +64,8 @@ protected:
 
 public:
   SimosRevised(const RanksMapType &ranks, const WhiteCardsMapType &whiteCards,
-               DataPrecisionType zRatio, unsigned int decimals);
+               DataPrecisionType zRatio, unsigned int decimals,
+               bool debug = false);
 
   std::vector<RankWeight> generateWeights();
 };

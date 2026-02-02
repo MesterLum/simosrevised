@@ -1,3 +1,5 @@
+#include <random>
+
 #include "./include/simos_revised.hpp"
 #include "include/utils.hpp"
 
@@ -13,17 +15,27 @@ int main() {
       {1, 0}, {2, 1}, {3, 0}, {4, 0}, {5, 0},
   };
 
-  SimosRevised simosRevised(ranks, whiteCards, 0.06, 0);
+  for (int i = 0; i <= 10000; i++) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist1(0.0, 100.0);
+    std::uniform_int_distribution<int> dist2(0, 8);
 
-  const auto weights = simosRevised.generateWeights();
+    float randomParam1 = dist1(gen);
+    int randomParam2 = dist2(gen);
 
-  const auto total = SimosUtils::getWeightsSum(weights);
-  for (const auto &w : weights) {
-    std::cout << w.rank << ": " << w.criterion << " : " << w.weight
-              << std::endl;
+    SimosRevised simosRevised(ranks, whiteCards, randomParam1, randomParam2);
+
+    const auto weights = simosRevised.generateWeights();
+
+    const auto total = SimosUtils::getWeightsSum(weights);
+    // for (const auto &w : weights) {
+    //   std::cout << w.rank << ": " << w.criterion << " : " << w.weight
+    //             << std::endl;
+    // }
+    std::cout << "Total: " << total << " Z Ratio: " << randomParam1
+              << " Decimals: " << randomParam2 << std::endl;
   }
-
-  std::cout << "Total: " << total << std::endl;
 
   return 0;
 }
