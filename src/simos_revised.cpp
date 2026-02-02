@@ -13,19 +13,28 @@ SimosRevised::SimosRevised(const RanksMapType &ranks,
       debug(debug) {}
 
 std::vector<RankWeight> SimosRevised::generateWeights() {
-
+  // Step 1: Convert white cards count to intervals (e_r = e'_r + 1)
+  // e_r represents number of intervals between ranks
   const auto whiteCardsNonZero = getWhiteCardsWithNonZeroValues();
   const auto whiteCardsNonZeroCount = getWhiteCardsCount(whiteCardsNonZero);
+  // Calculate u = (z-1)/e where z is the ratio between max and min criterion weight
+  // This ratio determines the unit for measuring intervals
   const auto ratio = getRatio(whiteCardsNonZeroCount);
 
+  // Step 2: Calculate non-normalized weights k(r) = 1 + u(e_0 + ... + e_{r-1})
+  // Convention k(1) = 1 for least important criterion
   const auto nonNormalizedWeights =
       getNonNormalizedWeights(whiteCardsNonZero, ratio);
 
   const auto sumNonNormalizedWeights = getWeightsSum(nonNormalizedWeights);
 
+  // Step 3: Calculate normalized weights k_i = 100 * k'_i / K'
+  // Normalize so sum equals 100
   auto normalizedWeights =
       getNormalizedWeights(nonNormalizedWeights, sumNonNormalizedWeights);
 
+  // Step 4: Truncate to w decimal places (w=0, 1, or 2)
+  // k''_i derived from k_i by deleting decimal figures
   const auto normalizedWeightsTruncated =
       getNormalizedWeightsTruncated(normalizedWeights);
 
@@ -33,14 +42,19 @@ std::vector<RankWeight> SimosRevised::generateWeights() {
       getWeightsSum(normalizedWeightsTruncated);
 
   const auto difference = 100.0 - sumNormalizedWeightsTruncated;
-
+  // Calculate m = 10^w * Δ where Δ = 100 - K''
+  // m criteria need 10^-w added to reach sum of 100
   int vValue = (int)round(pow(10, decimals) * difference);
+  // Calculate dysfunction ratios for rounding decisions
+  // δ'_i = [10^-w - (k_i - k''_i)] / k_i (round up dysfunction)
   const auto d1 =
       getNearestUpWeights(normalizedWeights, normalizedWeightsTruncated);
-
+  // δ_i = (k_i - k''_i) / k_i (round down dysfunction)
   const auto d2 =
       getNearestDownWeights(normalizedWeights, normalizedWeightsTruncated);
 
+  // Identify set M = {i | δ'_i > δ_i} - criteria where rounding down is better
+  // These criteria have lower dysfunction when rounded down
   const auto mGreaterValues = getGreaterElements(d1, d2);
 
   const auto mElementsCount = getSumGreaterElements(mGreaterValues);
@@ -49,23 +63,24 @@ std::vector<RankWeight> SimosRevised::generateWeights() {
 
   const auto n = getCriteriaCount();
 
+  // Partition criteria into F+ (round up) and F- (round down)
+  // Algorithm minimizes distortion in lexicographic way
   RanksMapType f1, f2;
   int forcedTotalElements = 0;
   int forcedDownElements = 0;
+  // Case (a): m + m̄ ≤ n
   if ((mElementsCount + vValue) <= n) {
     f1 = getF1Ranks(sortedD2, mGreaterValues,
                     mElementsCount + (n - vValue - mElementsCount),
                     mElementsCount);
     forcedDownElements = n - mElementsCount - vValue;
     f2 = getF2Ranks(sortedD2, mGreaterValues, vValue + forcedDownElements);
-    //   std::cout << "Forced down elements: " << vValue << " B "
-    //             << forcedDownElements << std::endl;
   } else {
+    // Case (b): m + m̄ > n
     f1 = getF1Ranks(sortedD1, mGreaterValues, n - vValue, mElementsCount);
     f2 = getF2Ranks(sortedD1, mGreaterValues,
                     n - mElementsCount + (vValue + mElementsCount - n));
     forcedTotalElements = vValue + mElementsCount - n;
-    std::cout << "Her2" << std::endl;
   }
 
   if (debug) {
@@ -118,6 +133,8 @@ std::vector<RankWeight> SimosRevised::generateWeights() {
   return finalWeights;
 }
 
+// Calculate k(r) = 1 + u(e_0 + ... + e_{r-1})
+// All criteria in same rank r have same weight k(r)
 WeightsMapType
 SimosRevised::getNonNormalizedWeights(const WhiteCardsMapType &whiteCards,
                                       DataPrecisionType ratio) {
@@ -144,6 +161,8 @@ SimosRevised::getNonNormalizedWeights(const WhiteCardsMapType &whiteCards,
   return weights;
 }
 
+// Calculate k_i = 100 * k'_i / K'
+// Where K' = sum of all non-normalized weights
 WeightsMapType
 SimosRevised::getNormalizedWeights(const WeightsMapType &nonNormalizedWeights,
                                    DataPrecisionType sumNonNormalizedWeights) {
@@ -162,6 +181,8 @@ unsigned int SimosRevised::getCriteriaCount() {
   return total;
 }
 
+// Convert white cards to intervals e_r = e'_r + 1
+// No white card means difference of 1*u, one white card means 2*u, etc.
 WhiteCardsMapType SimosRevised::getWhiteCardsWithNonZeroValues() {
   WhiteCardsMapType nonZeroWhiteCards;
   for (const auto &wc : whiteCards) {
@@ -181,6 +202,8 @@ SimosRevised::getWhiteCardsCount(const WhiteCardsMapType &whiteCards) {
   return total;
 }
 
+// Calculate u = (z-1)/e (retain 6 decimal places)
+// z is the ratio between most and least important criterion weights
 DataPrecisionType SimosRevised::getRatio(unsigned int whiteCardsCount) {
   return (zRatio - 1) / whiteCardsCount;
 }
@@ -195,6 +218,8 @@ DataPrecisionType SimosRevised::getWeightsSum(const WeightsMapType &weigths) {
   return total;
 }
 
+// Truncate k_i to k''_i with only w decimal places
+// Options: w=0 (no decimals), w=1 (one decimal), w=2 (two decimals)
 WeightsMapType
 SimosRevised::getNormalizedWeightsTruncated(const WeightsMapType &weights) {
   WeightsMapType truncatedWeights;
@@ -205,6 +230,8 @@ SimosRevised::getNormalizedWeightsTruncated(const WeightsMapType &weights) {
   return truncatedWeights;
 }
 
+// Calculate δ'_i = [10^-w - (k_i - k''_i)] / k_i
+// Represents dysfunction (relative error) when rounding up
 WeightsMapType SimosRevised::getNearestUpWeights(
     const WeightsMapType &normalizedWeights,
     const WeightsMapType &normalizedWeightsTruncated) {
@@ -222,6 +249,8 @@ WeightsMapType SimosRevised::getNearestUpWeights(
   return nearestWeights;
 }
 
+// Calculate δ_i = (k_i - k''_i) / k_i
+// Represents dysfunction (relative error) when rounding down
 WeightsMapType SimosRevised::getNearestDownWeights(
     const WeightsMapType &normalizedWeights,
     const WeightsMapType &normalizedWeightsTruncated) {
@@ -237,6 +266,8 @@ WeightsMapType SimosRevised::getNearestDownWeights(
   return nearestWeights;
 }
 
+// Build set M = {i | δ'_i > δ_i}
+// Criteria where round-up dysfunction exceeds round-down dysfunction
 RanksMapType SimosRevised::getGreaterElements(const WeightsMapType &d1,
                                               const WeightsMapType &d2) {
   RanksMapType mRanks;
@@ -257,6 +288,8 @@ unsigned int SimosRevised::getSumGreaterElements(const RanksMapType &mRanks) {
   return total;
 }
 
+// Create lists L (ascending δ_i) and L̄ (descending δ'_i)
+// Used for partitioning criteria into F+ and F-
 ListWeightType SimosRevised::sortWeights(const WeightsMapType &weights,
                                          bool asc) {
   ListWeightType orderedWeights;
@@ -277,6 +310,8 @@ ListWeightType SimosRevised::sortWeights(const WeightsMapType &weights,
   return orderedWeights;
 }
 
+// Build F- (criteria to round down)
+// Constructed based on cases (a) or (b) of the algorithm
 RanksMapType SimosRevised::getF1Ranks(const ListWeightType &weightsList,
                                       const RanksMapType &mList,
                                       unsigned int totalElements,
@@ -304,6 +339,8 @@ RanksMapType SimosRevised::getF1Ranks(const ListWeightType &weightsList,
   return ranksF1;
 }
 
+// Build F+ (criteria to round up)
+// |F+| = m̄ criteria need 10^-w added to reach sum of 100
 RanksMapType SimosRevised::getF2Ranks(const ListWeightType &weightsList,
                                       const RanksMapType &mList,
                                       unsigned int totalElements) {
@@ -351,6 +388,8 @@ SimosRevised::convertToRanksWeight(const WeightsMapType &weights) {
 
   return criterias;
 }
+// Handle ex aequo criteria when only some need rounding up
+// Choice is arbitrary, select criteria with higher subscripts
 void SimosRevised::forceRoundUp(std::vector<RankWeight> &weights,
                                 const ListWeightType &sortedWeights,
                                 const RanksMapType &listM,
@@ -372,6 +411,8 @@ void SimosRevised::forceRoundUp(std::vector<RankWeight> &weights,
   }
 }
 
+// Handle ex aequo criteria when only some need rounding down
+// Select based on smallest decimal parts to minimize distortion
 void SimosRevised::forceRoundDown(std::vector<RankWeight> &weights,
                                   const WeightsMapType &normalizedWeights,
                                   const RanksMapType &volunteers,
