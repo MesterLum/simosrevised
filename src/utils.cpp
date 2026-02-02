@@ -6,6 +6,9 @@
 
 DataPrecisionType SimosUtils::roundToXDecimals(DataPrecisionType value,
                                                unsigned int decimals) {
+  if (decimals == 0) {
+    return round(value);
+  }
   return round(value * pow(10, decimals)) / pow(10, decimals);
 }
 
@@ -34,4 +37,24 @@ void SimosUtils::printRankGroups(const RanksMapType &ranks) {
     std::cout << " ]" << std::endl;
   }
   std::cout << std::endl;
+}
+
+DataPrecisionType
+SimosUtils::getWeightsSum(const std::vector<RankWeight> &weights) {
+  DataPrecisionType total = 0;
+
+  for (const auto &w : weights) {
+    total += w.weight;
+  }
+
+  return total;
+}
+
+DataPrecisionType SimosUtils::roundUpToXDecimals(DataPrecisionType value,
+                                                 unsigned int decimals) {
+
+  if (decimals == 0) {
+    return ceil(value);
+  }
+  return ceil(value * pow(10, decimals)) / pow(10, decimals);
 }

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 SimosRevised::SimosRevised(const RanksMapType &ranks,
                            const WhiteCardsMapType &whiteCards,
@@ -10,7 +11,7 @@ SimosRevised::SimosRevised(const RanksMapType &ranks,
     : ranks(ranks), whiteCards(whiteCards), zRatio(zRatio), decimals(decimals) {
 }
 
-WeightsMapType SimosRevised::generateWeights() {
+std::vector<RankWeight> SimosRevised::generateWeights() {
 
   const auto whiteCardsNonZero = getWhiteCardsWithNonZeroValues();
   const auto whiteCardsNonZeroCount = getWhiteCardsCount(whiteCardsNonZero);
@@ -49,23 +50,30 @@ WeightsMapType SimosRevised::generateWeights() {
   const auto n = getCriteriaCount();
 
   RanksMapType f1, f2;
+  int forcedTotalElements = 0;
+  int forcedDownElements = 0;
   if ((mElementsCount + vValue) <= n) {
     f1 = getF1Ranks(sortedD2, mGreaterValues,
                     mElementsCount + (n - vValue - mElementsCount),
                     mElementsCount);
     f2 = getF2Ranks(sortedD2, mGreaterValues, vValue);
+    forcedDownElements = n - mElementsCount - vValue;
 
   } else {
+    f1 = getF1Ranks(sortedD1, mGreaterValues, n - vValue, mElementsCount);
+    f2 = getF2Ranks(sortedD1, mGreaterValues,
+                    n - mElementsCount + (vValue + mElementsCount - n));
+    forcedTotalElements = vValue + mElementsCount - n;
   }
 
   if (debug) {
     std::cout << "Ratio:" << ratio << std::endl;
     std::cout << "Total white cards: " << whiteCardsNonZeroCount << std::endl;
-    SimosUtils::printWeights(nonNormalizedWeights);
+    SimosUtils::printWeights(nonNormalizedWeights, 10);
     std::cout << "Sum non normalized weights: " << sumNonNormalizedWeights
               << std::endl;
     std::cout << "==== Normalized" << std::endl;
-    SimosUtils::printWeights(normalizedWeights, 9);
+    SimosUtils::printWeights(normalizedWeights, 10);
     std::cout << "==== Normalized Truncated" << std::endl;
     SimosUtils::printWeights(normalizedWeightsTruncated, 1);
     std::cout << "Sum normalized weights: " << sumNormalizedWeightsTruncated
@@ -88,6 +96,8 @@ WeightsMapType SimosRevised::generateWeights() {
     SimosUtils::printRankGroups(f1);
     SimosUtils::printRankGroups(f2);
   }
+  // Copying weights just in case needed
+  auto copiedWeights = normalizedWeights;
   roundUp(normalizedWeights, f2);
   roundDown(normalizedWeights, f1);
   if (debug) {
@@ -95,7 +105,14 @@ WeightsMapType SimosRevised::generateWeights() {
     SimosUtils::printWeights(normalizedWeights, 9);
   }
 
-  return normalizedWeights;
+  auto finalWeights = convertToRanksWeight(normalizedWeights);
+
+  if (forcedTotalElements > 0)
+    forceRoundUp(finalWeights, sortWeights(copiedWeights, false),
+                 mGreaterValues, forcedTotalElements);
+  if (forcedDownElements > 0)
+    forceRoundDown(finalWeights, copiedWeights, f2, forcedDownElements);
+  return finalWeights;
 }
 
 WeightsMapType
@@ -118,8 +135,7 @@ SimosRevised::getNonNormalizedWeights(const WhiteCardsMapType &whiteCards,
       if (idx == internalIdx)
         break;
     }
-    weights[r.first] =
-        SimosUtils::roundToXDecimals(1 + whiteCardsCount * ratio, 2);
+    weights[r.first] = 1 + whiteCardsCount * ratio;
     idx++;
   }
   return weights;
@@ -163,8 +179,7 @@ SimosRevised::getWhiteCardsCount(const WhiteCardsMapType &whiteCards) {
 }
 
 DataPrecisionType SimosRevised::getRatio(unsigned int whiteCardsCount) {
-  return SimosUtils::truncateToXDecimals((zRatio - 1) / whiteCardsCount,
-                                         decimalsToRetain);
+  return (zRatio - 1) / whiteCardsCount;
 }
 
 DataPrecisionType SimosRevised::getWeightsSum(const WeightsMapType &weigths) {
@@ -290,7 +305,6 @@ RanksMapType SimosRevised::getF2Ranks(const ListWeightType &weightsList,
                                       const RanksMapType &mList,
                                       unsigned int totalElements) {
   RanksMapType ranksF2;
-
   unsigned int counter = 0;
 
   for (const auto &w : weightsList) {
@@ -309,12 +323,86 @@ RanksMapType SimosRevised::getF2Ranks(const ListWeightType &weightsList,
 
 void SimosRevised::roundUp(WeightsMapType &weights, const RanksMapType &f2) {
   for (const auto &r : f2) {
-    weights[r.first] = SimosUtils::roundToXDecimals(weights.at(r.first), 1);
+    weights[r.first] =
+        SimosUtils::roundUpToXDecimals(weights.at(r.first), decimals);
   }
 }
 
 void SimosRevised::roundDown(WeightsMapType &weights, const RanksMapType &f1) {
   for (const auto &r : f1) {
-    weights[r.first] = SimosUtils::truncateToXDecimals(weights.at(r.first), 1);
+    weights[r.first] =
+        SimosUtils::truncateToXDecimals(weights.at(r.first), decimals);
+  }
+}
+std::vector<RankWeight>
+SimosRevised::convertToRanksWeight(const WeightsMapType &weights) {
+
+  std::vector<RankWeight> criterias;
+
+  for (const auto &r : ranks) {
+    for (const auto &c : r.second) {
+      RankWeight criterion = {r.first, c, weights.at(r.first)};
+      criterias.push_back(criterion);
+    }
+  }
+
+  return criterias;
+}
+void SimosRevised::forceRoundUp(std::vector<RankWeight> &weights,
+                                const ListWeightType &sortedWeights,
+                                const RanksMapType &listM,
+                                int forcedTotalElements) {
+  int counter = 0;
+  for (const auto &w : sortedWeights) {
+    if (counter >= forcedTotalElements)
+      break;
+    if (listM.find(w.first) == listM.end())
+      continue;
+    for (size_t i = 0; i < weights.size(); i++) {
+      if (weights[i].rank == w.first) {
+        counter++;
+        weights[i].weight = SimosUtils::roundUpToXDecimals(w.second, decimals);
+      }
+      if (counter >= forcedTotalElements)
+        break;
+    }
+  }
+}
+
+void SimosRevised::forceRoundDown(std::vector<RankWeight> &weights,
+                                  const WeightsMapType &normalizedWeights,
+                                  const RanksMapType &volunteers,
+                                  int forcedTotalElements) {
+
+  // This list will only keep the decimals
+  ListWeightType copiedWeights;
+
+  for (const auto &v : volunteers) {
+    std::pair<unsigned int, DataPrecisionType> val;
+
+    DataPrecisionType weight = normalizedWeights.at(v.first);
+    val.first = v.first;
+    val.second = weight - SimosUtils::truncateToXDecimals(weight, decimals);
+    copiedWeights.push_back(val);
+  }
+
+  // Sorting by decimal values
+  // ascending order
+  std::sort(copiedWeights.begin(), copiedWeights.end(),
+            [](const auto &a, const auto &b) { return a.second < b.second; });
+
+  int counter = 0;
+  for (const auto &w : copiedWeights) {
+    if (counter >= forcedTotalElements)
+      break;
+    for (size_t i = 0; i < weights.size(); i++) {
+      if (weights[i].rank == w.first) {
+        counter++;
+        const auto nWeight = normalizedWeights.at(w.first);
+        weights[i].weight = SimosUtils::truncateToXDecimals(nWeight, decimals);
+      }
+      if (counter >= forcedTotalElements)
+        break;
+    }
   }
 }

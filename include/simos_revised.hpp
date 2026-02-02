@@ -4,12 +4,18 @@
 #include <vector>
 
 typedef double DataPrecisionType;
-typedef std::string RankType;
-typedef std::vector<RankType> RankGroupType;
+typedef std::string CriterionType;
+typedef std::vector<CriterionType> RankGroupType;
 typedef std::map<unsigned int, RankGroupType> RanksMapType;
 typedef std::map<unsigned int, unsigned int> WhiteCardsMapType;
 typedef std::map<unsigned int, DataPrecisionType> WeightsMapType;
 typedef std::vector<std::pair<unsigned int, DataPrecisionType>> ListWeightType;
+
+struct RankWeight {
+  unsigned int rank;
+  CriterionType criterion;
+  DataPrecisionType weight;
+};
 
 class SimosRevised {
 private:
@@ -20,7 +26,6 @@ protected:
   WhiteCardsMapType whiteCards = {};
   DataPrecisionType zRatio;
   int decimals;
-  int decimalsToRetain = 6;
   WeightsMapType getNonNormalizedWeights(const WhiteCardsMapType &whiteCards,
                                          DataPrecisionType ratio);
   WeightsMapType
@@ -50,11 +55,18 @@ protected:
                           unsigned int totalElements);
   void roundUp(WeightsMapType &weights, const RanksMapType &f2);
   void roundDown(WeightsMapType &weights, const RanksMapType &f1);
+  std::vector<RankWeight> convertToRanksWeight(const WeightsMapType &weights);
+  void forceRoundUp(std::vector<RankWeight> &weights,
+                    const ListWeightType &sortedWeights,
+                    const RanksMapType &listM, int forcedTotalElements);
+  void forceRoundDown(std::vector<RankWeight> &weights,
+                      const WeightsMapType &normalizedWeights,
+                      const RanksMapType &volunteers, int forcedTotalElements);
 
 public:
   SimosRevised(const RanksMapType &ranks, const WhiteCardsMapType &whiteCards,
                DataPrecisionType zRatio, unsigned int decimals);
 
-  WeightsMapType generateWeights();
+  std::vector<RankWeight> generateWeights();
 };
 #endif
