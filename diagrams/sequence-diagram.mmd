@@ -5,63 +5,41 @@ sequenceDiagram
     
     User->>+SimosRevised: generateWeights()
     
-    Note over SimosRevised: Step 1: Process White Cards
     SimosRevised->>SimosRevised: getWhiteCardsWithNonZeroValues()
-    Note right of SimosRevised: Convert e'_r to e_r = e'_r + 1
     
     SimosRevised->>SimosRevised: getWhiteCardsCount()
-    Note right of SimosRevised: Sum all white card intervals
     
     SimosRevised->>SimosRevised: getRatio(whiteCardsCount)
-    Note right of SimosRevised: Calculate u = (z-1)/e
     
-    Note over SimosRevised: Step 2: Calculate Non-Normalized Weights
     SimosRevised->>SimosRevised: getNonNormalizedWeights(whiteCards, ratio)
-    Note right of SimosRevised: k(r) = 1 + u(e_0 + ... + e_{r-1})
     
     SimosRevised->>SimosRevised: getWeightsSum(nonNormalizedWeights)
-    Note right of SimosRevised: Sum K' = Σk(r)
     
-    Note over SimosRevised: Step 3: Normalize to 100
     SimosRevised->>SimosRevised: getNormalizedWeights(weights, sum)
-    Note right of SimosRevised: k_i = 100 * k'_i / K'
     
-    Note over SimosRevised: Step 4: Truncate to Decimal Places
     SimosRevised->>SimosRevised: getNormalizedWeightsTruncated(weights)
     SimosRevised->>+SimosUtils: truncateToXDecimals(value, decimals)
     SimosUtils-->>-SimosRevised: truncated value
-    Note right of SimosRevised: k''_i with w decimal places
     
     SimosRevised->>SimosRevised: getWeightsSum(truncated)
-    Note right of SimosRevised: Calculate Δ = 100 - K''<br/>m = 10^w * Δ
     
-    Note over SimosRevised: Step 5: Calculate Dysfunction Ratios
     SimosRevised->>SimosRevised: getNearestUpWeights(normalized, truncated)
-    Note right of SimosRevised: δ'_i = [10^-w - (k_i - k''_i)] / k_i
     
     SimosRevised->>SimosRevised: getNearestDownWeights(normalized, truncated)
-    Note right of SimosRevised: δ_i = (k_i - k''_i) / k_i
     
-    Note over SimosRevised: Step 6: Identify Set M
     SimosRevised->>SimosRevised: getGreaterElements(d1, d2)
-    Note right of SimosRevised: M = {i | δ'_i > δ_i}<br/>Round down is better
     
     SimosRevised->>SimosRevised: getSumGreaterElements(M)
     SimosRevised->>SimosRevised: sortWeights(d1, asc=true)
     SimosRevised->>SimosRevised: sortWeights(d2, asc=false)
     SimosRevised->>SimosRevised: getCriteriaCount()
     
-    Note over SimosRevised: Step 7: Partition into F+ and F-
     alt Case (a): m + m̄ ≤ n
         SimosRevised->>SimosRevised: getF1Ranks(sortedD2, M, params)
-        Note right of SimosRevised: Build F- (round down)
         SimosRevised->>SimosRevised: getF2Ranks(sortedD2, M, total)
-        Note right of SimosRevised: Build F+ (round up)
     else Case (b): m + m̄ > n
         SimosRevised->>SimosRevised: getF1Ranks(sortedD1, M, params)
-        Note right of SimosRevised: Build F- (round down)
         SimosRevised->>SimosRevised: getF2Ranks(sortedD1, M, total)
-        Note right of SimosRevised: Build F+ (round up)
     end
     
     opt Debug Mode
@@ -71,7 +49,6 @@ sequenceDiagram
         SimosUtils-->>-SimosRevised: printed
     end
     
-    Note over SimosRevised: Step 8: Apply Rounding
     SimosRevised->>SimosRevised: roundUp(weights, F2)
     SimosRevised->>+SimosUtils: roundUpToXDecimals(weight, decimals)
     SimosUtils-->>-SimosRevised: rounded up
@@ -80,24 +57,18 @@ sequenceDiagram
     SimosRevised->>+SimosUtils: truncateToXDecimals(weight, decimals)
     SimosUtils-->>-SimosRevised: truncated
     
-    Note over SimosRevised: Step 9: Convert to Final Format
     SimosRevised->>SimosRevised: convertToRanksWeight(weights)
-    Note right of SimosRevised: Map → vector<RankWeight>
     
-    Note over SimosRevised: Step 10: Handle Ex Aequo Criteria
     opt forcedTotalElements > 0
         SimosRevised->>SimosRevised: forceRoundUp(finalWeights, sorted, M, forced)
         SimosRevised->>+SimosUtils: roundUpToXDecimals(weight, decimals)
         SimosUtils-->>-SimosRevised: rounded up
-        Note right of SimosRevised: Handle tied criteria<br/>needing round up
     end
     
     opt forcedDownElements > 0
         SimosRevised->>SimosRevised: forceRoundDown(finalWeights, weights, F2, forced)
         SimosRevised->>+SimosUtils: truncateToXDecimals(weight, decimals)
         SimosUtils-->>-SimosRevised: truncated
-        Note right of SimosRevised: Handle tied criteria<br/>needing round down
     end
     
     SimosRevised-->>-User: vector<RankWeight>
-    Note over User: Final weights sum to 100<br/>with w decimal places
