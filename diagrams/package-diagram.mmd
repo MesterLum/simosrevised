@@ -1,0 +1,41 @@
+graph TB
+    subgraph Core["📦 Core Package"]
+        subgraph Types["Type Definitions"]
+            DataPrecisionType[DataPrecisionType]
+            CriterionType[CriterionType]
+            RankGroupType[RankGroupType]
+            RanksMapType[RanksMapType]
+            WhiteCardsMapType[WhiteCardsMapType]
+            WeightsMapType[WeightsMapType]
+            ListWeightType[ListWeightType]
+        end
+        
+        RankWeight[RankWeight struct]
+        SimosRevised[SimosRevised class]
+    end
+    
+    subgraph Utils["📦 Utilities Package"]
+        SimosUtils[SimosUtils class]
+    end
+    
+    subgraph Application["📦 Application Package"]
+        Main[main.cpp]
+    end
+    
+    %% Package dependencies
+    Utils -.->|depends on| Core
+    Application -.->|depends on| Core
+    Application -.->|depends on| Utils
+    
+    %% Internal dependencies
+    SimosUtils --> Types
+    SimosUtils --> RankWeight
+    SimosRevised --> Types
+    SimosRevised --> RankWeight
+    Main --> SimosRevised
+    Main --> SimosUtils
+    
+    style Core fill:#e3f2fd
+    style Utils fill:#fff4e1
+    style Application fill:#e8f5e9
+    style Types fill:#f5f5f5

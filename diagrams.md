@@ -194,3 +194,75 @@ sequenceDiagram
 8. **Apply Rounding**: Execute the rounding strategy
 9. **Convert to Final Format**: Transform to output structure
 10. **Handle Ex Aequo Criteria**: Address tied rankings with forced rounding
+
+---
+
+## Package Diagram
+
+The package diagram shows the high-level organization of the project into logical packages and their dependencies.
+
+```mermaid
+graph TB
+    subgraph Core["📦 Core Package"]
+        subgraph Types["Type Definitions"]
+            DataPrecisionType[DataPrecisionType]
+            CriterionType[CriterionType]
+            RankGroupType[RankGroupType]
+            RanksMapType[RanksMapType]
+            WhiteCardsMapType[WhiteCardsMapType]
+            WeightsMapType[WeightsMapType]
+            ListWeightType[ListWeightType]
+        end
+        
+        RankWeight[RankWeight struct]
+        SimosRevised[SimosRevised class]
+    end
+    
+    subgraph Utils["📦 Utilities Package"]
+        SimosUtils[SimosUtils class]
+    end
+    
+    subgraph Application["📦 Application Package"]
+        Main[main.cpp]
+    end
+    
+    %% Package dependencies
+    Utils -.->|depends on| Core
+    Application -.->|depends on| Core
+    Application -.->|depends on| Utils
+    
+    %% Internal dependencies
+    SimosUtils --> Types
+    SimosUtils --> RankWeight
+    SimosRevised --> Types
+    SimosRevised --> RankWeight
+    Main --> SimosRevised
+    Main --> SimosUtils
+    
+    style Core fill:#e3f2fd
+    style Utils fill:#fff4e1
+    style Application fill:#e8f5e9
+    style Types fill:#f5f5f5
+```
+
+### Package Descriptions
+
+- **Core Package** (`include/simos_revised.hpp`): Contains the fundamental types, data structures, and the main SimosRevised algorithm implementation
+  - Type definitions for data precision, criteria, ranks, and weight mappings
+  - RankWeight structure for output data
+  - SimosRevised class with the complete weight calculation algorithm
+
+- **Utilities Package** (`include/utils.hpp`): Provides helper functions for mathematical operations and output formatting
+  - Rounding and truncation utilities
+  - Print functions for debugging and output
+  - Weight sum calculation
+
+- **Application Package** (`main.cpp`): Entry point for the application demonstrating the SIMOS Revised method
+  - Creates sample data
+  - Executes the weight calculation
+  - Displays results
+
+### Package Dependencies
+
+- **Utilities** depends on **Core** for type definitions and data structures
+- **Application** depends on both **Core** and **Utilities** for complete functionality
