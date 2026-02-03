@@ -212,6 +212,10 @@ auto weights = simos.generateWeights();
 └── README.md                 # This file
 ```
 
+## Diagrams
+
+For visual representations of the algorithm and class structure, see the [diagrams documentation](diagrams/readme.md).
+
 ## Algorithm Details
 
 The SIMOS Revised algorithm follows these steps:
@@ -248,7 +252,7 @@ The SIMOS Revised algorithm follows these steps:
 
 ## Testing
 
-The project includes comprehensive unit tests:
+The project includes comprehensive unit tests. For detailed information about the testing strategy and test cases, see the [testing documentation](tests/readme.md).
 
 ```bash
 # Run all tests
